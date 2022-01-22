@@ -10,3 +10,8 @@ Para fines de este curso, se usarán únicamente los tres primeros módulos:
 Este censo tuvo como fin obtener información estadística sobre las características  sociodemográficas y situación jurídica de la población penitenciaria de 18 años y más de edad recluida  en los 66 establecimientos penitenciarios del país.
 
 Las bases originales pueden encontrarse en: http://iinei.inei.gob.pe/microdatos/Consulta_por_Encuesta.asp
+
+Grupo 3:
+J. De la Cruz,
+D. Soto Hurtado,
+G. Cornejo Castellano.
