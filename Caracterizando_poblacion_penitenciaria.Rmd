@@ -1,0 +1,515 @@
+---
+title: "¿Cómo se caracteriza la población penitenciaria en el Perú?"
+author: "Gissela C. Cornejo Castellano"
+date: "10/11/2021"
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+---
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+setwd("E:\2 Drive\1 PUCP\3 Fundamentos de R - sábados\6 Ejercicios prácticos\3 Final")
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Abrir las librerías
+library("rio")
+library("tidyverse")
+library("ggplot2")
+library("dplyr")
+library("knitr")
+library("rmarkdown")
+library("printr")
+library("kableExtra")
+library("treemapify")
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Importar las bases de datos
+
+# Carátula 860
+caratula=import("01_PENALES_CARATULA.sav")
+# Módulo 861
+familiaysociedad=import("01_PENALES_CAP100.sav")
+# Módulo 862
+tipificacion=import("01_PENALES_CAP200.sav")
+# Módulo 863
+vidaenelpenal=import("01_PENALES_CAP300.sav")
+# Módulo 864
+instituciones=import("01_PENALES_CAP300.sav")
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Combinar bases de datos y seleccionar variables de interés
+basesdedatoscombinadas = full_join(caratula, familiaysociedad, by = "ID_CARATULA") %>% 
+  select(ID_CARATULA, DD, EST_PENIT, GENERO, RELIGION, EDAD, NACIONALIDAD, DELITO_ESPECIFICO, P104_1, P105, P109_1, P109B_1, P109C_1, P110, P112, P114, P119_1, P119_2, P119_3, P119_4, P119_5, P119_6, P126, P127, P128, P129, P131, P133)
+```
+
+El objetivo de este artículo es describir a la población penitenciaria en el Perú a partir del *[Censo Nacional Penitenciario 2016](https://www.inei.gob.pe/prensa/noticias/primer-censo-nacional-penitenciario-registro-77-mil-86-internos-en-los-establecimientos-penitenciarios-del-pais-9175/)*, el primer y único censo hasta el momento en nuestro país, que brinda información sobre las características personales y contexto familiar y social de los(as) internos(as), el delito por el que se le privó la libertad, sus condiciones de vida en el recinto penitenciario, entre otros. Logró recopilar información sobre sexo, edad, nacionalidad, orientación sexual –aunque con claras confusiones conceptuales en esta última variable–, antecedentes laborales y familiares, y más.
+
+Por ello, la pregunta que responderá es la misma que titula este escrito: *¿Cómo se caracteriza la población penitenciaria en el Perú?*, lo que da pie a un trabajo de tipo descriptivo. De manera secundaria, responderá preguntas básicas como *¿cuáles son sus características sociodemográficas?, ¿qué antecedentes familiares son más comunes?, ¿cuáles son los delitos más prevalentes?*, entre otros. Parto de la hipótesis sobre sus características personales de que la mayoría de internos son varones, de edad intermedia (adultos). Que son predominatemente heterosexuales, peruanos y en un porcentaje menor venezolanos y colombianos. En cuanto a sus características sociales, parto de la hipótesis de que la mayoría ha consumido drogas alguna vez en su vida, muy pocos han sido parte de las fuerzas del orden (policías, serenazgo, rondas campesinas, etc.)y que la mayoría ha vivido experiencias de violencia en la niñez.
+
+Cabe resaltar que este artículo no intenta explicar el porqué las personas delinquen, ni cuáles son las características predictoras para que una persona delinca, pues no asume a priori que todos(as) los censados(as) han cometido algún delito. Según cifras del propio censo, como se verá más adelante, cerca del 50% de personas privadas de su libertad en las cárceles son **procesadas**, no **sentenciadas**. Por tanto puede –aunque no se haya recogido en el censo– que un porcentaje importante sea declarado inocente luego de su juicio. 
+
+Para este informe se usaron 2 de las 5 bases de datos en las que se divide la data recopilada por el Censo Nacional Penitenciario 2016. Dichas bases son de libre acceso [aquí](http://iinei.inei.gob.pe/microdatos/Consulta_por_Encuesta.asp). 
+
+
+## Características personales de la población penitenciaria peruana
+En todos los penales del país, el 94% de internos es hombre y solo el 6% de la población penitenciaria es mujer. Cabe resaltar que no se especifica si esta pregunta fue respondida por sexo asignado al nacer o por identificación. En otras palabras, no se sabe si los(as) encuestadores(as) aceptaron como respuesta únicamente aquella denominación que se le asignó a la persona encuestada al nacer, o también se aceptó como respuesta su identidad de género, que en caso de las personas transexuales o transgénero difiere de lo escrito en sus DNI.
+
+Este tema ameritaría ser explicado pues, como se verá más adelante, se formuló una pregunta sobre identidad de género que: 
+1. No fue obligatoria: primero se les preguntó si les gustaría responder una pregunta sobre identidad de género,
+2. fue incorporada en el bloque de preguntas sobre salud, cuando en realidad la diversidad de género o sexual no es una afectación a la salud, sino una característica identitaria;
+3. dentro de esta pregunta, se usó la alternativa "homosexual" como un paraguas que agrupa la homosexualidad en hombres y mujeres, la transexualidad y la intersexualidad. 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+basesdedatoscombinadas$GENERO[basesdedatoscombinadas$GENERO == "1"] <- "Hombre"
+basesdedatoscombinadas$GENERO[basesdedatoscombinadas$GENERO == "2"] <- "Mujer"
+sexotabla=round(prop.table((table(basesdedatoscombinadas$GENERO)))*100, 2)
+sexotabla=as.data.frame(sexotabla) %>% 
+  rename(Sexo = Var1)
+```
+
+```{r 1, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(data=sexotabla,
+       aes(x=1, y=Freq, fill=Sexo))+
+  geom_bar(width=1, stat = "identity", color = "white")+
+  geom_text(aes(label = paste0(round(Freq,2),"%")),
+            position = position_stack(vjust = 0.5), color = "white")+
+  coord_polar(theta = "y")+
+  theme_minimal()+
+  scale_fill_manual(values = c("#0073C2FF","#EFC000FF"))+
+  labs(title = "Sexo de los(as) internos(as)", x = element_blank(), y = element_blank()) +
+    guides(fill = guide_legend(title = "Sexo")) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+Por otro lado, la edad mínima de los internos es de 18 años y el interno más longevo tiene 89 años. A la fecha del censo, 38 internos no dieron su edad, por lo que fueron omitidos en este análisis. Por temas metodológicos se dividió a la población por rangos de 10 años, obteniendo 7 grupos etarios. Como se aprecia, mientras más edad, menos presencia porcentual en la población penal. Los(as) internos(as) de entre 18 y 29 años son los más populosos: 26 155 internos(as) son jóvenes entre estas edades. 
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+basesdedatoscombinadas$Edad=basesdedatoscombinadas$EDAD
+basesdedatoscombinadas$Edad[basesdedatoscombinadas$Edad >= 18 & basesdedatoscombinadas$Edad <= 29 ] <- "18-29 años"
+basesdedatoscombinadas$Edad[basesdedatoscombinadas$Edad >= 30 & basesdedatoscombinadas$Edad <= 39 ] <- "30-39 años"
+basesdedatoscombinadas$Edad[basesdedatoscombinadas$Edad >= 40 & basesdedatoscombinadas$Edad <= 49 ] <- "40-49 años"
+basesdedatoscombinadas$Edad[basesdedatoscombinadas$Edad >= 50 & basesdedatoscombinadas$Edad <= 59 ] <- "50-59 años"
+basesdedatoscombinadas$Edad[basesdedatoscombinadas$Edad >= 60 & basesdedatoscombinadas$Edad <= 69 ] <- "60-69 años"
+basesdedatoscombinadas$Edad[basesdedatoscombinadas$Edad >= 70 & basesdedatoscombinadas$Edad <= 79 ] <- "70-79 años"
+basesdedatoscombinadas$Edad[basesdedatoscombinadas$Edad >= 80 & basesdedatoscombinadas$Edad <= 89 ] <- "80-89 años"
+
+tablarangosetarios=basesdedatoscombinadas %>%
+  group_by(Edad) %>%
+  summarise(Cantidad = n())
+tablarangosetarios=as.data.frame(tablarangosetarios)
+tablarangosetarios=na.omit(tablarangosetarios)
+```
+
+```{r, results='asis', echo=FALSE, warning=FALSE, message=FALSE}
+tablarangosetarios %>% 
+  knitr::kable(caption = "Tabla 1: Cantidad de internos por rango etario") %>% 
+  kableExtra::kable_styling(bootstrap_options = "striped", full_width = FALSE)
+```
+
+
+```{r 2, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(data=tablarangosetarios, 
+       aes(x=Edad, y=Cantidad)) + 
+  geom_bar(stat="identity", fill = "#0073C2FF") +
+  scale_fill_manual()+theme_minimal()+labs(y="Cantidad de internos(as)",x="Grupos etarios",title = "Población penitenciaria por grupo etario",caption = "Fuente de datos: INEI. Perú: Primer Censo Nacional Penitenciario 2016")+
+  geom_text(size=4,aes(label= Cantidad),vjust = -0.3,data=tablarangosetarios)+
+     guides(fill = guide_legend(title = "Grupo etario")) + theme_minimal()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+En cuanto a la distribución de rangos etarios por sexo, hay una ligera variación. Si en general las personas entre 18 y 29 años son las más representadas en las cárceles en el Perú, dicha tendencia no se condice al analizar por sexo: el mayor porcentaje de hombres se encuentra en dicho rango etario, pero el mayor porcentaje de mujeres, por 0.3 puntos porcentuales, está entre 30 y 39 años. 
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+tablarangosetariosxsexo=basesdedatoscombinadas %>% 
+  group_by(Edad, GENERO) %>% 
+  summarise(Cantidad = n())
+tablarangosetariosxsexo$Porcentaje = (tablarangosetariosxsexo$Cantidad / sum(tablarangosetariosxsexo$Cantidad)*100)
+tablarangosetariosxsexo=as.data.frame(tablarangosetariosxsexo)
+tablarangosetariosxsexo=na.omit(tablarangosetariosxsexo)
+```
+
+```{r 3, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(tablarangosetariosxsexo, 
+       aes(fill=GENERO, y=Cantidad, x=Edad)) + 
+    geom_bar(position="dodge", stat="identity") +
+  scale_fill_manual(values = c("#0073C2FF", "#EFC000FF"))+
+  labs(y=element_blank(),x="Grupos etarios",title = "Población penitenciaria por grupo etario y sexo",caption = "Fuente de datos: INEI. Perú: Primer Censo Nacional Penitenciario 2016") +
+  geom_text(aes(label=paste0(round(Porcentaje,1),"%")),color="black", vjust= -0.5, size=3)+ theme_minimal()+
+  guides(fill = guide_legend(title = "Sexo"))+
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+En lo concerniente a sus nacionalidades, evidentemente la amplia mayoría reporta ser peruano. Luego, las siguientes 5 nacionalidades que lideran la tabla son todas hispanoparlantes, y, salvo España, todas latinoamericanas. En 2016, los(as) venezolanos(as) no figuraban entre los más numerosos en la población penitenciaria. 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+tablanacionalidad=basesdedatoscombinadas %>% 
+  group_by(NACIONALIDAD) %>% 
+  summarise(Cantidad = n())
+tablanacionalidad=as.data.frame(tablanacionalidad)
+tablanacionalidad=na.omit(tablanacionalidad)
+tablanacionalidad=tablanacionalidad[!(is.na(tablanacionalidad$NACIONALIDAD) | tablanacionalidad$NACIONALIDAD==""), ]
+```
+
+```{r, results='asis', echo=FALSE, warning=FALSE, message=FALSE}
+tablanacionalidadtop5=tablanacionalidad %>% 
+group_by(NACIONALIDAD) %>%
+  tally(Cantidad, sort = TRUE) %>%
+  group_by(NACIONALIDAD = factor(c(NACIONALIDAD[1:6], rep("Otras nacionalidades", n() - 6)),levels = c(NACIONALIDAD[1:6], "Otras nacionalidades"))) %>%
+  tally(n) 
+tablanacionalidadtop5 = tablanacionalidadtop5 %>% 
+  rename(Cantidad = n)
+tablanacionalidadtop5$Porcentaje = (tablanacionalidadtop5$Cantidad / sum(tablanacionalidadtop5$Cantidad)*100)
+tablanacionalidadtop5 %>%
+  knitr::kable(caption = "Tabla 2: Ranking de nacionalidades de los(as) internos(as)") %>% 
+  kableExtra::kable_styling(bootstrap_options = "striped", full_width = FALSE)
+```
+
+```{r 4, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(tablanacionalidadtop5, 
+       aes(fill=NACIONALIDAD, y=Cantidad, x=NACIONALIDAD)) + 
+    geom_bar(stat="identity") +
+  scale_fill_manual(values = c("#0972b5", "#ffe544", "#11383f", "#008eff","#ff9f08","#fffb91","#f3eae8"))+
+  labs(y=element_blank(), title = "Porcentaje de población penitenciaria por nacionalidad",caption = "Fuente de datos: INEI. Perú: Primer Censo Nacional Penitenciario 2016") +
+  geom_text(aes(label=paste0(round(Porcentaje,1),"%")),color="black", vjust= -0.5, size=3)+ theme_minimal()+
+  guides(fill = guide_legend(title = "Nacionalidad"))+
+    theme(plot.title = element_text(hjust = 0.5), axis.text.x=element_blank(), axis.title.x = element_blank())
+```
+
+Por otro lado, y como se adelantó más arriba, en la sección de orientación sexual hay una clara confusión: el INPE redacta como variable "identidad de género", cuando en realidad los datos recolectados corresponden a la orientación sexual. Además, a los(as) internos(as) se les preguntó sobre su orientación en la sección de preguntas sobre salud. Esa decisión hace sentir la diversidad sexual como patologizante, en vez de solo una característica identitaria adicional.Colocarla en medio de preguntas sobre padecimientos de salud podría haber traído un sesgo. 
+Además, es importante subrayar la falta de rigor en formular esta pregunta, pues dentro de la opciones a responder se encuentra la de "homosexual"; sin embargo, el cuestionario incluye la intersexualidad y la transexualidad dentro de lo "homosexual", cuando en realidad deben pertener a dos categorías diferentes: a la de orientación sexual y a la de identidad de género. Formulado de la forma en que se hizo hace que se pierda bastante información valiosa sobre la cantidad precisa de personas homosexuales y transexuales privadas de su libertad. Ello sería importante para formular preguntar para la población transexual privada de su libertad, por ejemplo. ¿Tendrían que cumplir su condena en cárceles para personas del mismo sexo asignado al nacer, o en cárceles del género con el que se identifican?
+
+El 76% aceptó responder la pregunta formulada como "identidad sexual", cuando en realidad refiere a "orientación sexual". De ello, como se aprecia en el gráfico de barras subsiguiente, el 74.3% se identifica como heterosexual. En segundo lugar, un 0.9% no quiso responder y un 0.7% se identifica como bisexual.
+
+En conclusión, en términos de sexo y orientación sexual, la inmensa mayoría de la población penitenciaria se identifica como hombre heterosesexual y, en segundo lugar, como mujer heterosexual. La población LGTBIQ+ no está significativamente representada, o han habido sesgos en las preguntas y respuestas.
+
+```{r, results='asis', echo=FALSE, warning=FALSE, message=FALSE}
+tablap111=familiaysociedad %>% 
+  group_by(P111) %>% 
+  summarise(Cantidad = n()) 
+tablap111$Porcentaje = (tablap111$Cantidad / sum(tablap111$Cantidad)*100) 
+tablap111$P111[tablap111$P111 == "1"] <- "Sí"
+tablap111$P111[tablap111$P111 == "2"] <- "No" 
+tablap111=na.omit(tablap111)
+tablap111 = tablap111 %>%
+  rename(Respuesta= P111)
+tablap111 %>%
+  knitr::kable(caption = "Tabla 3: '¿Desea que le formule una pregunta sobre su identidad de género?'") %>% 
+  kableExtra::kable_styling(bootstrap_options = "striped", full_width = FALSE)
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+tablaorientacionsexual=familiaysociedad %>% 
+  group_by(P112) %>% 
+  summarise(cantidad = n())
+tablaorientacionsexual$porcentaje=(tablaorientacionsexual$cantidad / sum(tablaorientacionsexual$cantidad)*100)
+
+tablaorientacionsexual=as.data.frame(tablaorientacionsexual)
+
+
+tablaorientacionsexual <- tablaorientacionsexual %>%
+  rename(orientacion_sexual = P112)
+
+tablaorientacionsexual$orientacion_sexual[tablaorientacionsexual$orientacion_sexual == "1"] <- "Heterosexual" 
+tablaorientacionsexual$orientacion_sexual[tablaorientacionsexual$orientacion_sexual == "2"] <- "Bisexual"
+tablaorientacionsexual$orientacion_sexual[tablaorientacionsexual$orientacion_sexual == "3"] <- "Homosexual (lesbiana, gay, transexual, intersexual)"
+tablaorientacionsexual$orientacion_sexual[tablaorientacionsexual$orientacion_sexual == "4"] <- "No responde"
+
+tablaorientacionsexual$orientacion_sexual[is.na(tablaorientacionsexual$orientacion_sexual)] <- "No aceptó que le formularan la pregunta"
+```
+
+
+```{r 5, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(tablaorientacionsexual, 
+       aes(fill=orientacion_sexual, y=cantidad, x=orientacion_sexual)) + 
+    geom_bar(stat="identity") +
+  scale_fill_manual(values = c("#11383f", "#0972b5", "#008eff", "#ffe544", "#ff9f08"))+
+  labs(y=element_blank(), title = "Porcentaje de población penitenciaria según orientación sexual") + 
+  geom_text(aes(label=paste0(round(porcentaje,1),"%")),color="black", vjust= -0.5, size=3)+ theme_minimal()+
+  guides(fill = guide_legend(title = "Orientación sexual"))+
+    theme(plot.title = element_text(hjust = 0), axis.text.x=element_blank(), axis.title.x = element_blank())
+```
+
+```{r, results='asis', echo=FALSE, warning=FALSE, message=FALSE}
+tablaorientacionxsexo = basesdedatoscombinadas %>% 
+  group_by(GENERO, P112) %>% 
+  summarise(Cantidad = n())
+tablaorientacionxsexo = na.omit(tablaorientacionxsexo)
+tablaorientacionxsexo$Porcentaje = (tablaorientacionxsexo$Cantidad / sum(tablaorientacionxsexo$Cantidad)*100)
+tablaorientacionxsexo = tablaorientacionxsexo %>% 
+  rename(Orientacion = P112)
+
+tablaorientacionxsexo$Orientacion[tablaorientacionxsexo$Orientacion == "1"] <- "Heterosexual" 
+tablaorientacionxsexo$Orientacion[tablaorientacionxsexo$Orientacion == "2"] <- "Bisexual"
+tablaorientacionxsexo$Orientacion[tablaorientacionxsexo$Orientacion == "3"] <- "Homosexual (lesbiana, gay, transexual, intersexual)"
+tablaorientacionxsexo$Orientacion[tablaorientacionxsexo$Orientacion == "4"] <- "No responde"
+
+tablaorientacionxsexo %>%
+  knitr::kable(caption = " Tabla 4: Orientación sexual por sexo del interno(a) encuestado(a)") %>% 
+  kableExtra::kable_styling(bootstrap_options = "striped", full_width = FALSE)
+```
+
+```{r 6, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(tablaorientacionxsexo, aes(area = Porcentaje, fill = GENERO, label = Orientacion, subgroups = Orientacion)) +
+  geom_treemap() +
+  geom_treemap_text(colour = "Black",
+                    place = "centre",
+                    size = 15,
+                    grow = TRUE)+
+   labs(y=element_blank(), title = "Orientación sexual según el sexo del(a) encuestado(a)", caption = "Fuente de datos: INEI. Perú: Primer Censo Nacional Penitenciario 2016") + 
+  scale_fill_manual(values = c("#0972b5", "#ffe544"))+
+    theme_minimal()+
+  guides(fill = guide_legend(title = "Sexo"))+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+# Características sociales de la población penal
+El Censo también formuló otras preguntas relacionadas al historial laboral, consumo de drogas, vida familiar, entre otros. 
+
+El 95% de internos ha trabajado de algún modo antes de entrar al penal. 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+tablatrabajo=basesdedatoscombinadas%>% 
+  group_by(P114) %>% 
+  summarise(cantidad = n())
+
+tablatrabajo$porcentaje=(tablatrabajo$cantidad / sum(tablatrabajo$cantidad)*100)
+tablatrabajo=na.omit(tablatrabajo)
+tablatrabajo=as.data.frame(tablatrabajo)
+tablatrabajo <- tablatrabajo %>%
+  rename(ha_trabajado = P114)
+tablatrabajo$ha_trabajado[tablatrabajo$ha_trabajado == "1"] <- "Sí"
+tablatrabajo$ha_trabajado[tablatrabajo$ha_trabajado == "2"] <- "No" 
+```
+
+```{r 7, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(data=tablatrabajo,
+       aes(x=1, y=porcentaje, fill=ha_trabajado))+
+  geom_bar(width=1, stat = "identity", color = "white")+
+  geom_text(aes(label = paste0(round(porcentaje,2),"%")),
+            position = position_stack(vjust = 0.5), color = "white")+
+  coord_polar(theta = "y")+
+  theme_minimal()+
+  scale_fill_manual(values = c("#EFC000FF", "#0073C2FF"))+
+  labs(title = "¿Ha trabajado antes de ingresar al penal?", caption = "Fuente de datos: INEI. Perú: Primer Censo Nacional Penitenciario 2016") +
+   guides(fill = guide_legend(title = element_blank())) +
+  theme(plot.title = element_text(hjust = 0.4), axis.text.x=element_blank(), axis.title.x = element_blank())
+```
+Un gran porcentaje de los internos ha trabajado como parte de las fuerzas del orden alguna vez en su vida. Casi un 20% de los internos(as)afirma haber pertenecidos a las Fuerzas Armadas, aunque no se especifica su cargo.
+
+```{r, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE}
+FFAA = basesdedatoscombinadas %>% 
+  group_by(P119_1) %>% 
+  summarise(Cantidad = n())
+
+FFAA$Porcentaje=(FFAA$Cantidad / sum(FFAA$Cantidad)*100)
+FFAA=na.omit(FFAA)
+FFAA=as.data.frame(FFAA)
+
+FFAA$P119_1[FFAA$P119_1 == "1"] <- "Sí"
+FFAA$P119_1[FFAA$P119_1 == "2"] <- "No" 
+FFAA <- FFAA %>%
+  rename(Respuesta = P119_1)
+FFAA %>%
+  knitr::kable(caption = " Tabla 5: '¿Perteneció a las Fuerzas Armadas?'") %>% 
+  kableExtra::kable_styling(bootstrap_options = "striped", full_width = FALSE)
+```
+
+Mil presos han sido parte de la policía, aunque no se especifica su cargo, ello representa poco más del 1% de la población penal.
+
+```{r 11, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE}
+PNP = basesdedatoscombinadas %>% 
+  group_by(P119_2) %>% 
+  summarise(Cantidad = n())
+
+PNP$Porcentaje=(PNP$Cantidad / sum(PNP$Cantidad)*100)
+PNP=na.omit(PNP)
+PNP=as.data.frame(PNP)
+
+PNP$P119_2[PNP$P119_2 == "1"] <- "Sí"
+PNP$P119_2[PNP$P119_2 == "2"] <- "No"
+PNP <- PNP %>%
+  rename(Respuesta = P119_2)
+PNP %>%
+  knitr::kable(caption = " Tabla 6: '¿Perteneció a la Policía?'") %>% 
+  kableExtra::kable_styling(bootstrap_options = "striped", full_width = FALSE)
+```
+Un porcentaje ligeramente mayor representan los exserenos, quienes son el 1.5% de los internos(as).
+
+```{r 99, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE}
+serenazgo = basesdedatoscombinadas %>% 
+  group_by(P119_3) %>% 
+  summarise(Cantidad = n())
+
+serenazgo$Porcentaje=(serenazgo$Cantidad / sum(serenazgo$Cantidad)*100)
+serenazgo=na.omit(serenazgo)
+serenazgo=as.data.frame(serenazgo)
+
+serenazgo$P119_3[serenazgo$P119_3 == "1"] <- "Sí"
+serenazgo$P119_3[serenazgo$P119_3 == "2"] <- "No"
+serenazgo <- serenazgo %>%
+  rename(Respuesta = P119_3)
+serenazgo %>%
+  knitr::kable(caption = " Tabla 7: '¿Perteneció al Serenazgo?'") %>% 
+  kableExtra::kable_styling(bootstrap_options = "striped", full_width = FALSE)
+```
+
+Además, casi un 5% de personas privadas de su libertad ha formado parte de las rondas campesinas alguna vez.
+
+```{r, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE}
+ronderos = basesdedatoscombinadas %>% 
+  group_by(P119_4) %>% 
+  summarise(Cantidad = n())
+
+ronderos$Porcentaje=(ronderos$Cantidad / sum(ronderos$Cantidad)*100)
+ronderos=na.omit(ronderos)
+ronderos=as.data.frame(ronderos)
+
+ronderos$P119_4[ronderos$P119_4 == "1"] <- "Sí"
+ronderos$P119_4[ronderos$P119_4 == "2"] <- "No"
+ronderos <- ronderos %>%
+  rename(Respuesta = P119_4)
+ronderos %>%
+  knitr::kable(caption = " Tabla 8: '¿Perteneció a las rondas campesinas?'") %>% 
+  kableExtra::kable_styling(bootstrap_options = "striped", full_width = FALSE)
+```
+
+Y casi un 3% ha formado parte de los comités de autodefensa. Cabe resaltar que estas cifras no son excluyentes: personas que fueron policías también fueron ronderos o personas que fueron parte de algún comité de autodefensa también fueron serenazgos. 
+
+```{r, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE}
+autodefensa = basesdedatoscombinadas %>% 
+  group_by(P119_6) %>% 
+  summarise(Cantidad = n())
+
+autodefensa$Porcentaje=(autodefensa$Cantidad / sum(autodefensa$Cantidad)*100)
+autodefensa=na.omit(autodefensa)
+autodefensa=as.data.frame(autodefensa)
+
+autodefensa$P119_6[autodefensa$P119_6 == "1"] <- "Sí"
+autodefensa$P119_6[autodefensa$P119_6 == "2"] <- "No"
+autodefensa <- autodefensa %>%
+  rename(Respuesta = P119_6)
+autodefensa %>%
+  knitr::kable(caption = " Tabla 9: '¿Perteneció a algún comité de autodefensa?'") %>% 
+  kableExtra::kable_styling(bootstrap_options = "striped", full_width = FALSE)
+```
+
+En cuanto a drogas,la gran mayoría afirma que antes de ingresar al penal no consumía drogas. El 75% lo afirma. Los hombres que no consumían drogas antes de ingresar al penal conforman el grueso de la población penitenciaria en el Perú. 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+tabladrogas=familiaysociedad %>% 
+  group_by(P109_1) %>% 
+  summarise(Cantidad = n())
+
+tabladrogas$Porcentaje=(tabladrogas$Cantidad / sum(tabladrogas$Cantidad)*100)
+tabladrogas=na.omit(tabladrogas)
+tabladrogas=as.data.frame(tabladrogas)
+
+
+tabladrogas <- tabladrogas %>%
+  rename(Respuesta = P109_1)
+
+tabladrogas$Respuesta[tabladrogas$Respuesta == "1"] <- "Sí"
+tabladrogas$Respuesta[tabladrogas$Respuesta == "2"] <- "No" 
+tabladrogas$Respuesta[tabladrogas$Respuesta == "3"] <- "No contesta"
+
+tabladrogas %>%
+  knitr::kable(caption = " Tabla 8: 'Antes de ingresar al pena, ¿consumía drogas?'") %>% 
+  kableExtra::kable_styling(bootstrap_options = "striped", full_width = FALSE)
+```
+
+```{r 8, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(data=tabladrogas,
+       aes(x=1, y=Porcentaje, fill=Respuesta))+
+  geom_bar(width=1, stat = "identity", color = "white")+
+  geom_text(aes(label = paste0(round(Porcentaje,2),"%")),
+            position = position_stack(vjust = 0.5), color = "white")+
+  coord_polar(theta = "y")+
+  theme_minimal()+
+  scale_fill_manual(values = c("#0073C2FF", "#11383f", "#EFC000FF"))+
+  labs(title = "¿Ha consumido drogas antes de ingresar al penal?", caption = "Fuente de datos: INEI. Perú: Primer Censo Nacional Penitenciario 2016") +
+   guides(fill = guide_legend(title = element_blank())) +
+  theme(plot.title = element_text(hjust = 0.4), axis.text.x=element_blank(), axis.title.x = element_blank())
+```
+Por otro lado, la Tabla 9 muestra la mayoría de los internos son hombres que NO consumían drogas antes de ingresar al penal, llegando a representar casi el 70% de la población penal. El segundo grupo más grande es el de hombres que sí consumían algún tipo de drogas, llegando a representar casi el 24%.
+
+```{r, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE}
+drogasxsexo = basesdedatoscombinadas %>% 
+  group_by(GENERO, P109_1) %>% 
+  summarise(Cantidad = n())
+drogasxsexo=na.omit(drogasxsexo)
+drogasxsexo = drogasxsexo %>%
+  rename(consumia_drogas = P109_1)
+drogasxsexo$consumia_drogas[drogasxsexo$consumia_drogas == "1"] <- "Sí"
+drogasxsexo$consumia_drogas[drogasxsexo$consumia_drogas == "2"] <- "No" 
+drogasxsexo$consumia_drogas[drogasxsexo$consumia_drogas == "3"] <- "No contesta"
+drogasxsexo$Porcentaje = (drogasxsexo$Cantidad / sum(drogasxsexo$Cantidad)*100)
+drogasxsexo %>%
+  knitr::kable(caption = " Tabla 9: Consumo de drogas por sexo") %>% 
+  kableExtra::kable_styling(bootstrap_options = "striped", full_width = FALSE)
+```
+
+
+```{r 9, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(drogasxsexo, 
+       aes(fill=GENERO, y=Cantidad, x=consumia_drogas)) + 
+    geom_bar(position="dodge", stat="identity") +
+  scale_fill_manual(values = c("#0073C2FF", "#EFC000FF", "#11383f", "#ffe544", "#ff9f08", "#dce357"))+
+  labs(y=element_blank(),x="",title = "¿Consumía drogas?",caption = "Fuente de datos: INEI. Perú: Primer Censo Nacional Penitenciario 2016") +
+  geom_text(aes(label=paste0(round(Porcentaje,1),"%")),color="black", vjust= -0.6, size=3)+ theme_minimal()+
+  guides(fill = guide_legend(title = "Sexo"))+
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+Por otro lado, el porcentaje de internos que fueron golpeados de niños, ya sea siempre o a veces, y aquellos que no, es equiparable, ambos bordean el 50%. 
+
+```{r, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE}
+lepegaban=basesdedatoscombinadas %>% 
+  group_by(P126) %>% 
+  summarise(Cantidad = n())
+lepegaban = na.omit(lepegaban)
+
+lepegaban = lepegaban %>%
+  rename(Respuesta = P126)
+
+lepegaban$Porcentaje = (lepegaban$Cantidad / sum(lepegaban$Cantidad)*100)
+
+lepegaban$Respuesta[lepegaban$Respuesta == "1"] <- "Sí, siempre"
+lepegaban$Respuesta[lepegaban$Respuesta == "2"] <- "Sí, a veces" 
+lepegaban$Respuesta[lepegaban$Respuesta == "3"] <- "No"
+lepegaban$Respuesta[lepegaban$Respuesta == "4"] <- "No contesta"
+
+lepegaban %>%
+  knitr::kable(caption = " Tabla 10: 'Cuando usted era niño, ¿alguno de sus padres le pegaban?'") %>% 
+  kableExtra::kable_styling(bootstrap_options = "striped", full_width = FALSE)
+```
+
+```{r 10, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(lepegaban, 
+       aes(fill=Respuesta, y=Cantidad, x=Respuesta)) + 
+    geom_bar(stat="identity") +
+  scale_fill_manual(values = c("#0073C2FF", "#124b77", "#ffe544", "#ff871d"))+
+  labs(y=element_blank(), title = "Internos(as) que afirman haber sido golpeados de niños(as)") + 
+  geom_text(aes(label=paste0(round(Porcentaje,1),"%")),color="black", vjust= -0.5, size=3)+ theme_minimal()+
+  guides(fill = guide_legend(title = "Respuesta"))+
+    theme(plot.title = element_text(hjust = 0), axis.text.x=element_blank(), axis.title.x = element_blank())
+```
+Los resultados demuestran que el grueso de la población es hombre heterosexual. La mitad de ellos ha sido agredidos por sus padres cuando niños, el 75% no consumía drogas antes de ingresar al penal. Además, un porcentaje importante de los privados de su libertad fue parte de alguna fuerza del orden, ya sea de las FF. AA, la policía, el serenazgo, ronderos, entre otros.
+
+Nuevamente, es necesario resaltar que estas cifras no determinan los factores del porqué las personas delinquen, ni cuáles son las características predictoras para que una persona delinca, pues no asume a priori que todos(as) los censados(as) han cometido algún delito. Casi el 50% de personas privadas de su libertad están presas sin sentencia.
+
+Las bases del Censo Penitenciario del 2016 son de libre acceso [aquí](http://iinei.inei.gob.pe/microdatos/Consulta_por_Encuesta.asp).
